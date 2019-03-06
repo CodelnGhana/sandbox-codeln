@@ -25,6 +25,10 @@ def user_dashboard(request):
     return render(request, 'marketplace/developer/home.html')
 
 
+def dev_pool(request):
+    return render(request, 'marketplace/recruiter/dev_pool.html')
+
+
 def job_list(request):
     """a view to display the list of jobs."""
     jobs = Job.objects.all()

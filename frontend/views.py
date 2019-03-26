@@ -15,7 +15,7 @@ from projects.models import Project, Framework
 from frontend.form import Projectinvite, EditProjectForm
 from frontend.models import candidatesprojects, devs, recruiters
 from classroom.models import TakenQuiz,Student
-
+from marketplace.models import Job
 
 @login_required
 def developer_filling_details(request, current_profile):
@@ -101,7 +101,8 @@ def index(request):
                     obj.save()
                     return render(request, 'frontend/developer/developer.html')
             elif request.user.profile.user_type == 'recruiter':
-                return render(request, 'frontend/recruiter/recruiter.html', {'transactions': transactions})
+                jobs = Job.objects.filter(posted_by=request.user)
+                return render(request, 'frontend/recruiter/recruiter.html', {'transactions': transactions,'jobs': jobs})
     else:
         return home(request)
 

@@ -83,7 +83,6 @@
         </div>
 
 
-        <a id="devs" href="{% url 'marketplace:job_list' %}"><span data-feather="rotate-cw"></span> Refresh list</a>
         <table class="table">
             <thead class="thead-dark">
             <tr>
@@ -103,7 +102,7 @@
             {% for job in jobs %}
                 <tr>
                     <td> {{ forloop.counter }} </td>
-                    <td><a href="{{ job.posted_by.company_url }}" target="_blank">{{ job.posted_by.company }}</a></td>
+                    <td><a href="{{ job.posted_by.profile.company_url }}" target="_blank">{{ job.posted_by.profile.company }}</a></td>
                     <td>{{ job.title }}</td>
                     <td>{{ job.job_role }}</td>
                     <td>{{ job.dev_experience }}</td>
@@ -111,15 +110,24 @@
                     <td>{{ job.tech_stack }}</td>
                     <td>{{ job.remuneration }}</td>
                     <td>
-                        {% if job in applied_jobs %}
-                            Applied
-                        {% else %}
-                            Not Applied
-                        {% endif %}
+                    {% if applied_jobs %}
+                        {% for app in applied_jobs %}
+
+                            {% if job.id == app.job_id and app.selected %}
+                                Picked
+                                {% elif job.id == app.job_id and app.selected == False %}
+                                Applied
+                                {% else %}
+                                Not applied
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        Not Applied
+                    {% endif %}
                     </td>
-                    <td><a href="
-                            {{ job.get_absolute_url_dev }}{% if job in applied_jobs %}?applied=True{% else %}?applied=False{% endif %}">view
-                        details</a></td>
+                    <td>
+                        <a href="{% url 'marketplace:dev_job_detail' job.id %}">view details</a>
+                    </td>
                 </tr>
 
             {% endfor %}

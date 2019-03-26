@@ -12,12 +12,13 @@ from django.utils.decorators import method_decorator
 from django.views.generic import ListView
 from ..decorators import student_required
 from ..forms import TakeQuizForm
-from ..models import Quiz, Student, TakenQuiz, User,StudentAnswer,Answer,Subject
-from random import randint
+from ..models import Quiz, Student, TakenQuiz, User,StudentAnswer,Answer,Subject,RandomQuiz,Question
+import random
 from transactions.models import OpenCall
 
 @method_decorator([login_required, student_required], name='dispatch')
 class QuizListView(ListView):
+
     model = Quiz
     ordering = ('name', )
     context_object_name = 'quizzes'
@@ -25,9 +26,7 @@ class QuizListView(ListView):
 
     def get_queryset(self):
         student = self.request.user.student
-        taken_quizzes = student.quizzes.values_list('pk', flat=True)
         queryset = Quiz.objects.all() \
-            .exclude(pk__in=taken_quizzes) \
             .annotate(questions_count=Count('questions')) \
             .filter(questions_count__gt=0)
         return queryset
@@ -37,18 +36,7 @@ class QuizListView(ListView):
         context['subjects'] = Subject.objects.all()
 
         return context
-# @login_required
-# @student_required
-# def quizzeslist(request):
-#     subjects = Subject.objects.all()
-#     quizzes = Quiz.objects.all()
-#
-#
-#     return render(request, 'classroom/students/quiz_list.html',{'quizzes':quizzes,'subjects':subjects,})
-def retake(request,quizid,studentid):
-    TakenQuiz.objects.filter(quiz_id=quizid,student_id=studentid).delete()
-    StudentAnswer.objects.filter(quiz_id=quizid,student_id=studentid).delete()
-    return redirect('students:quiz')
+
 
 
 @method_decorator([login_required, student_required], name='dispatch')
@@ -77,59 +65,88 @@ def student_registration(request):
         registration.save()
         return redirect('students:quiz_list')
 
-
 @login_required
-def take_quiz(request, pk,):
+def take(request, pk):
+    global tempquiz
+
     quiz = get_object_or_404(Quiz, pk=pk)
     student = Student.objects.get(user_id=request.user.id)
+    correct_answers = StudentAnswer.objects.filter(quiz=quiz).filter(student=student).filter(answer__is_correct=True).count()
+    questionlist = []
+    try:
+        tempquiz = RandomQuiz.objects.get(quiz_id=pk)
+    except RandomQuiz.DoesNotExist:
+        currentquiz =Question.objects.filter(quiz_id=pk)
+        for onequestion in currentquiz:
+
+            questionlist.append(onequestion.id)
+        try:
+            mell = random.sample(questionlist, 3)
+            obj = RandomQuiz(quiz=quiz, student=student, questions=mell)
+            obj.save()
+            return redirect('students:take', pk)
+        except:
+            pass
+
     if student.quizzes.filter(pk=pk).exists():
         return render(request, 'classroom/students/taken_quiz.html')
 
-    total_questions = quiz.questions.count()
-    unanswered_questions = student.get_unanswered_questions(quiz)
-    number = unanswered_questions.count()
-    total_unanswered_questions = unanswered_questions.count()
-    progress = 100 - round(((total_unanswered_questions - 1) / total_questions) * 100)
-    question = unanswered_questions.first()
 
 
-    if request.method == 'POST':
-        form = TakeQuizForm(question=question, data=request.POST)
-        if form.is_valid():
-            with transaction.atomic():
-                if 'answer' in request.POST:
-                    student_answer = form.save(commit=False)
-                    student_answer.student = student
-                    student_answer.quiz = quiz
-                    student_answer.save()
-                else:
-                    default_answer = StudentAnswer(quiz=quiz,student=student,answer=Answer.objects.filter(question_id = question.id).last())
-                    default_answer.save()
+    if not tempquiz.questions == None:
+        tital =tempquiz.questions
+        randlist =[]
+        for x in tital:
+            randlist.append(int(x))
+        maswali =Question.objects.filter(id__in=randlist)
+        total_questions = len(randlist)
+        total_unanswered_questions = maswali.count()
+        progress = 100 - round(((total_unanswered_questions - 1) / total_questions) * 100)
+        question = maswali.first()
+        ile =[]
+        ile.append(question.id)
 
-                if student.get_unanswered_questions(quiz).exists():
-                    return redirect('students:take_quiz', pk)
-                else:
-                    correct_answers = student.quiz_answers.filter(answer__question__quiz=quiz, answer__is_correct=True).count()
-                    score = (correct_answers / total_questions) * 100
-                    TakenQuiz.objects.create(student=student, quiz=quiz, score=score)
-                    if score < 50:
-                        messages.warning(request, 'Better luck next time! Your score for the quiz %s was %s.' % (quiz.name, score))
+        res = list(set(randlist) ^ set(ile))
+
+        if request.method == 'POST':
+            form = TakeQuizForm(question=question, data=request.POST)
+            if form.is_valid():
+                with transaction.atomic():
+                    if 'answer' in request.POST:
+                        student_answer = form.save(commit=False)
+                        student_answer.student = student
+                        student_answer.quiz = quiz
+                        student_answer.save()
+                        mimi = RandomQuiz.objects.get(quiz_id=pk)
+                        mimi.questions = res
+                        mimi.save()
+
                     else:
-                        messages.success(request, 'Congratulations! You completed the quiz %s with success! You scored %s points.' % (quiz.name, score))
-                    return redirect('students:quiz_list')
-    else:
-        form = TakeQuizForm(question=question)
+                        default_answer = StudentAnswer(quiz=quiz,student=student,answer=Answer.objects.filter(question_id = question.id).last())
+                        default_answer.save()
+                        mimi = RandomQuiz.objects.get(quiz_id=pk)
+                        mimi.questions = res
+                        mimi.save()
+                    if student.get_unanswered_questions(quiz).exists():
+                        return redirect('students:take', pk)
+        else:
+            form = TakeQuizForm(question=question)
 
-    return render(request, 'classroom/students/take_quiz_form.html', {
-        'quiz': quiz,
-        'question': question,
-        'form': form,
-        'progress': progress
-    })
+        return render(request, 'classroom/students/take_quiz_form.html', {
+            'quiz': quiz,
+            'question': question,
+            'form': form,
+            'progress': progress
+        })
+
+    else:
+        score = (correct_answers / 3) * 100
+        TakenQuiz.objects.create(student=student, quiz=quiz, score=score)
+        return redirect('students:taken_quiz_list')
+
 
 def retake(request,quizid,studentid):
 
     TakenQuiz.objects.filter(quiz_id=quizid,student_id=studentid).delete()
     StudentAnswer.objects.filter(quiz_id=quizid,student_id=studentid).delete()
     return redirect('students:take_quiz', quizid)
-

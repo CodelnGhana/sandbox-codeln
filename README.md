@@ -6,7 +6,7 @@ To use this project, follow these steps:
 
 1. Create your working environment.
 2. Create a virtual env python 3.5 and above
-3. pip install -r requirements
+3. pip install -r requirements.txt
 Create an env file
 DEFAULT_FROM_EMAIL=
 EMAIL_HOST_PASSWORD=

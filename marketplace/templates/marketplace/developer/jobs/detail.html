@@ -131,7 +131,7 @@
             {% csrf_token %}
 
             <p class="text-center mt-4">
-                {% if job_applied_status %}
+                {% if status %}
                     <input class="btn theme--dark primary " style="border-radius: 0; margin: auto; color: white" type="submit" value="Great! You've Applied For This Job Already" disabled>
                 {% else %}
                     <input class="btn theme--dark primary " style="border-radius: 0; margin: auto; color: white" type="submit" value="Apply For This Job!">

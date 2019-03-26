@@ -1,7 +1,7 @@
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
-
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from projects.forms import FrameworkForm
@@ -128,7 +128,7 @@ def success(request):
 
     return  render(request, 'transactions/success.html')
 
-
+@login_required
 def sourcing(request):
     if request.method == 'POST':
         sourcing_form = SourcingForm(request.POST)

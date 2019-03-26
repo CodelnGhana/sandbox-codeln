@@ -23,6 +23,8 @@ class Transaction(models.Model):
     completed = models.DateTimeField(auto_now=True)
     paid = models.BooleanField(default=False)
     framework = models.ForeignKey(Framework, on_delete=models.CASCADE)
+    projecttitle = models.CharField(null=True, max_length=100)
+    closed = models.BooleanField(default=False)
 
     def allcandidates(self):
         candidates = Candidate.objects.filter(transaction=self.id)

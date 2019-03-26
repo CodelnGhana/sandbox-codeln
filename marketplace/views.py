@@ -1,89 +1,34 @@
 from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render, get_object_or_404
-
-from .models import Job, Recruiter, Developer, JobApplication, Person
+from django.contrib.auth.models import User
+from .models import Job, JobApplication
 from .forms import JobForm
 
-
-def user_dashboard(request):
-    """a view to show developer's home on marketplace."""
-    user_is_recruiter = False
-
-    user = Person.objects.get(auth_user__username=request.user)
-
-    user_has_posted_jobs = False
-
-    try:
-        if isinstance(user.recruiter, Recruiter):
-            user_is_recruiter = True
-            user_has_posted_jobs = True if Job.objects.filter(posted_by=user.recruiter).first() else False
-    except:
-        pass
-
-    if user_is_recruiter:
-        return render(request, 'marketplace/recruiter/home.html', {'user_has_posted_jobs': user_has_posted_jobs})
-    return render(request, 'marketplace/developer/home.html')
-
-
 def job_list(request):
-    """a view to display the list of jobs."""
     jobs = Job.objects.all()
-
-    developer = Developer.objects.get(auth_user__username=request.user)
-
-    applied_jobs = developer.applied_jobs.all()
-
-    return render(request, 'marketplace/developer/jobs/list.html',
-                  {'jobs': jobs, 'applied_jobs': [j_a.job for j_a in applied_jobs]})
+    developer = request.user
+    applied_jobs = JobApplication.objects.filter(candidate=developer).all()
+    return render(request, 'marketplace/developer/jobs/list.html',{'jobs': jobs, 'applied_jobs': applied_jobs})
 
 
-def dev_job_detail(request, year, month, day, job):
-    """a view to display details of a single job."""
-    job = get_object_or_404(
-        Job,
-        slug=job,
-        position_filled=False,
-        created__year=year,
-        created__month=month,
-        created__day=day
-    )
-
-    applied = True if request.GET['applied'] == 'True' else False
-
+def dev_job_detail(request,id):
+    status = JobApplication.objects.filter(job_id=id).filter(candidate=request.user).all()
+    job =Job.objects.get(id=id)
     return render(request, 'marketplace/developer/jobs/detail.html',
-                  {'job': job, 'job_applied_status': applied})
+                  {'job': job,'status':status})
 
 
-def recruiter_job_detail(request, job_id, list_of_applicants, list_selected_devs):
-    """a view to display job_details of a single job."""
-    job = Job.objects.get(id=job_id)
+def recruiter_job_detail(request,id):
+    job = Job.objects.get(id=id)
 
     selected_candidates = []
     applicants = []
-
-    if list_selected_devs != 'NONE':
-        dev_ids = list_selected_devs.split(",")
-        for _id in dev_ids:
-            dev_id = int(_id)
-            try:
-                selected_candidates.append(Developer.objects.get(id=dev_id))
-            except:
-                pass
-    else:
-        pass
-
-    if list_of_applicants != 'NONE':
-        dev_ids = list_of_applicants.split(",")
-        for _id in dev_ids:
-            dev_id = int(_id)
-            try:
-                developer = Developer.objects.get(id=dev_id)
-                if developer not in selected_candidates:
-                    applicants.append(developer)
-            except:
-                pass
-    else:
-        pass
+    selected_devs = JobApplication.objects.filter(selected=True).all()
+    for selectdev in selected_devs:
+        selected_candidates.append(selectdev.candidate)
+    all_devs = JobApplication.objects.filter(selected=False).all()
+    for alldev in all_devs:
+        applicants.append(alldev.candidate)
 
     recommended = [dev for dev in get_recommended_developers(job) if dev not in selected_candidates]
 
@@ -92,8 +37,7 @@ def recruiter_job_detail(request, job_id, list_of_applicants, list_selected_devs
 
 
 def post_job(request):
-    """a view to post a job."""
-    recruiter = Recruiter.objects.get(auth_user__username=request.user)
+    recruiter = request.user
 
     if request.method == 'POST':
         job_form = JobForm(data=request.POST)
@@ -101,7 +45,6 @@ def post_job(request):
             new_job = job_form.save(commit=False)
             new_job.posted_by = recruiter
             new_job.save()
-            # job_form = JobForm()
             return HttpResponseRedirect("/marketplace/recruiter/manage_posted_jobs/")
     else:
         job_form = JobForm()
@@ -109,82 +52,70 @@ def post_job(request):
 
 
 def apply_for_job(request, job_id):
-    """a view to apply for a job."""
     if request.method == 'POST':
         job = Job.objects.get(id=job_id)
-
-        job_application, was_created = JobApplication.objects.get_or_create(job=job)
-
-        job_application.applied_by.add(Developer.objects.get(auth_user__username=request.user))
-
+        newapply =JobApplication(candidate=request.user,job=job)
+        newapply.save()
         return HttpResponseRedirect("/marketplace/dev/job_list/")
     else:
         return HttpResponseRedirect("/marketplace/dev/job_list/")
 
 
 def manage_posted_jobs(request):
-    """a view to display the list of jobs."""
-    jobs = Job.objects.filter(posted_by=Recruiter.objects.get(auth_user__username=request.user))
-
-    job_details = []
-
-    all_selected_candidates = None
-    all_applicants = None
-
+    jobs = Job.objects.filter(posted_by=request.user)
+    job_details=[]
     for job in jobs:
-        try:
-            all_selected_candidates = JobApplication.objects.get(job=job).selected_devs.all()
-            all_applicants = JobApplication.objects.get(job=job).applied_by.all()
-        except:
-            pass
+        applied = JobApplication.objects.filter(job_id=job.id).all()
+        app =applied.count()
+        selected =JobApplication.objects.filter(job_id=job.id).filter(selected=True).all()
+        sele=selected.count()
+        job_details.append((job,app,sele))
 
-        if all_selected_candidates:
-            selected_candidates = [dev.id for dev in all_selected_candidates]
-        else:
-            selected_candidates = []
 
-        if all_applicants:
-            applied_by = [dev.id for dev in all_applicants]
-        else:
-            applied_by = []
-
-        job_details.append((job, applied_by, selected_candidates))
-
-    return render(request, 'marketplace/recruiter/jobs/list.html',
-                  {'job_details': job_details})
+    return render(request, 'marketplace/recruiter/jobs/list.html',{'job_details':job_details})
 
 
 def pick_candidate(request, job_id, dev_id):
     job = Job.objects.get(id=job_id)
+    dev =User.objects.get(id=dev_id)
+    newpick = JobApplication(job=job,candidate=dev,selected=True)
+    newpick.save()
 
-    job_application, was_created = JobApplication.objects.get_or_create(job=job)
-
-    job_application.selected_devs.add(Developer.objects.get(id=dev_id))
+    return HttpResponseRedirect("/marketplace/recruiter/manage_posted_jobs/")
+def select_candidate(request, job_id, dev_id):
+    candidate = User.objects.get(id=dev_id)
+    job = JobApplication.objects.filter(job_id=job_id).filter(candidate=candidate).get()
+    job.selected = True
+    job.save()
 
     return HttpResponseRedirect("/marketplace/recruiter/manage_posted_jobs/")
 
-
 def get_recommended_developers(job):
-    developers = Developer.objects.all()
+    allusers = User.objects.all()
+    developers=[]
+    for alluser in allusers:
+        if alluser.profile.user_type =='developer':
+            developers.append(alluser)
+
 
     recommended_developers = set()
 
     tech_stack = job.tech_stack.split(',')
 
     for developer in developers:
-        if job.engagement_type == developer.availability:
+        if job.engagement_type == developer.profile.availabilty:
             recommended_developers.add(developer)
-        elif job.job_role == developer.language or job.job_role == developer.framework:
+        elif job.job_role == developer.profile.language or job.job_role == developer.profile.framework:
             recommended_developers.add(developer)
-        elif developer.language in tech_stack or developer.framework in tech_stack:
+        elif developer.profile.language in tech_stack or developer.profile.framework in tech_stack:
             recommended_developers.add(developer)
-        elif job.location == developer.country:
+        elif job.location == developer.profile.country:
             recommended_developers.add(developer)
-        elif (job.dev_experience == 'Entry' or job.dev_experience == 'Junior') and developer.years == '1-2':
+        elif (job.dev_experience == 'Entry' or job.dev_experience == 'Junior') and developer.profile.years == '1-2':
             recommended_developers.add(developer)
-        elif (job.dev_experience == 'Junior' or job.dev_experience == 'Mid-Level') and developer.years == '2-4':
+        elif (job.dev_experience == 'Junior' or job.dev_experience == 'Mid-Level') and developer.profile.years == '2-4':
             recommended_developers.add(developer)
-        elif (job.dev_experience == 'Mid-Level' or job.dev_experience == 'Senior') and developer.years == '4-above':
+        elif (job.dev_experience == 'Mid-Level' or job.dev_experience == 'Senior') and developer.profile.years == '4-above':
             recommended_developers.add(developer)
         else:
             pass

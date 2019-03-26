@@ -88,10 +88,13 @@
                 <h1 style="color: #0580c9">{{ job.title }}</h1>
 
                 <p class="date">
-                    Job Posted {{ job.created }} by <span
-                        style="color: #c69500">{{ job.posted_by }} ({{ job.posted_by.job_role }})</span> of <span
-                        style="color: #c91452"><a href="{{ job.posted_by.company_url }}"
-                                                  target="_blank">{{ job.posted_by.company }}</a></span>
+                    Job Posted {{ job.created }} by
+                    <span style="color: #c69500">{{ job.posted_by }} ({{ job.posted_by.profile.job_role }})</span> of
+                    <span style="color: #c91452">
+                        <a href="{{ job.posted_by.profile.company_url }}"
+                           target="_blank">{{ job.posted_by.profile.company }}
+                        </a>
+                    </span>
                 </p>
 
                 <h3 style="color: #0580c9">Job Description</h3>
@@ -132,11 +135,13 @@
                         {% for dev in selected_candidates %}
                             <div class="card recruithomecard" style="width: 80%;margin: 10%; margin-top: 0%;">
                                 <div class="card-body">
-                                    <img height="40" width="auto" class="img-fluid" src="/static/frontend/images/devprofile.png"
-                                         style="width: 30%; text-align: center; display: block; margin: 0 auto" alt="Card image cap">
+                                    <img height="40" width="auto" class="img-fluid"
+                                         src="/static/frontend/images/devprofile.png"
+                                         style="width: 30%; text-align: center; display: block; margin: 0 auto"
+                                         alt="Card image cap">
 
                                     <h6 class="card-title text-center"
-                                        style="text-align: -webkit-center;">{{ dev.auth_user.first_name }} {{ dev.auth_user.last_name }}</h6>
+                                        style="text-align: -webkit-center;">{{ dev.first_name }} {{ dev.last_name }}</h6>
 
                                     <p class="text-center"><a href=".">Chat</a></p>
                                 </div>
@@ -172,15 +177,15 @@
             {% for dev in applicants %}
                 <tr>
                     <td> {{ forloop.counter }} </td>
-                    <td>{{ dev.auth_user.first_name }} {{ dev.auth_user.last_name }}</td>
-                    <td>{{ dev.auth_user.email }}</td>
-                    <td>{{ dev.country.name }}</td>
-                    <td>{{ dev.language }}</td>
-                    <td>{{ dev.framework }}</td>
-                    <td><a href="{{ dev.github }}" target="_blank">github account</a></td>
-                    <td><a href="{{ dev.linkedin }}" target="_blank">linkedin</a></td>
-                    <td><a href="{{ dev.portfolio }}" target="_blank">portfolio</a></td>
-                    <td><a href="{% url 'marketplace:pick_candidate' job.id dev.id %}"><span style="color: #28a745">Pick Candidate</span></a>
+                    <td>{{ dev.first_name }} {{ dev.last_name }}</td>
+                    <td>{{ dev.email }}</td>
+                    <td>{{ dev.profile.country.name }}</td>
+                    <td>{{ dev.profile.language }}</td>
+                    <td>{{ dev.profile.framework }}</td>
+                    <td><a href="{{ dev.profile.github_repo }}" target="_blank">github account</a></td>
+                    <td><a href="{{ dev.profile.linkedin_url }}" target="_blank">linkedin</a></td>
+                    <td><a href="{{ dev.profile.portfolio }}" target="_blank">portfolio</a></td>
+                    <td><a href="{% url 'marketplace:select_candidate' job.id dev.id %}"><span style="color: #28a745">Pick Candidate</span></a>
                     </td>
                 </tr>
 
@@ -210,14 +215,14 @@
             {% for dev in recommended %}
                 <tr>
                     <td> {{ forloop.counter }} </td>
-                    <td>{{ dev.auth_user.first_name }} {{ dev.auth_user.last_name }}</td>
-                    <td>{{ dev.auth_user.email }}</td>
-                    <td>{{ dev.country.name }}</td>
-                    <td>{{ dev.language }}</td>
-                    <td>{{ dev.framework }}</td>
-                    <td><a href="{{ dev.github }}" target="_blank">github account</a></td>
-                    <td><a href="{{ dev.linkedin }}" target="_blank">linkedin</a></td>
-                    <td><a href="{{ dev.portfolio }}" target="_blank">portfolio</a></td>
+                    <td>{{ dev.first_name }} {{ dev.auth_user.last_name }}</td>
+                    <td>{{ dev.email }}</td>
+                    <td>{{ dev.profile.country.name }}</td>
+                    <td>{{ dev.profile.language }}</td>
+                    <td>{{ dev.profile.framework }}</td>
+                    <td><a href="{{ dev.profile.github_repo }}" target="_blank">github account</a></td>
+                    <td><a href="{{ dev.profile.linkedin_url }}" target="_blank">linkedin</a></td>
+                    <td><a href="{{ dev.profile.portfolio }}" target="_blank">portfolio</a></td>
                     <td><a href="{% url 'marketplace:pick_candidate' job.id dev.id %}"><span style="color: #28a745">Pick Candidate</span></a>
                     </td>
                 </tr>

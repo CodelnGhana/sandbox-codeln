@@ -6,7 +6,7 @@ app_name = 'chat'
 
 urlpatterns = [
     path('chat_home/', views.chat_home, name='chat_home'),
-    path('chat/<int:sender>/<int:receiver>', views.chat_view, name='chat'),
+    path('chat/<int:sender>/<int:receiver>', views.chat_view, name='set_chat'),
     path('api/messages/<int:sender>/<int:receiver>', views.message_list, name='message-detail'),
     path('api/messages', views.message_list, name='message-list'),
     path('api/users/<int:pk>', views.user_list, name='user-detail'),

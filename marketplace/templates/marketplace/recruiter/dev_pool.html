@@ -197,6 +197,10 @@
                                             class="text-muted">{{ dev.profile.availabilty }}</span></p>
                                 <p><a href="{% url 'marketplace:dev_details' dev.id %}">View Details</a>
                             </p>
+                                {% if request.user.is_authenticated %}
+                                 <p><a href="{% url 'chat:set_chat' request.user.id dev.id %}">Chat Candidate</a>
+                            </p>
+                                {% endif %}
                                 </div>
 
                             </div>

@@ -139,21 +139,21 @@ def get_recommended_developers(job):
 
 def dev_pool(request):
     withprofiles = Github.objects.all()
-    profileids=[]
-    passedquizzes ={}
+    profileids = []
+    passedquizzes = {}
     for candidate_id in profileids:
         student = Student.objects.get(user_id=profileids)
-        passedexams=TakenQuiz.objects.filter(student_id=student.id)
-        allsubject=[]
+        passedexams = TakenQuiz.objects.filter(student_id=student.id)
+        allsubject = []
         for passedexam in passedexams:
             allsubject.append(passedexam.quiz.subject.name)
-        setsubjects= set(allsubject)
-        subjectlist=list(setsubjects)
-        passedquizzes[candidate_id]=subjectlist
+        setsubjects = set(allsubject)
+        subjectlist = list(setsubjects)
+        passedquizzes[candidate_id] = subjectlist
     for profile in withprofiles:
         profileids.append(profile.candidate_id)
 
-    developers = User.objects.filter(id__in=profileids)
+    developers = User.objects.filter(profile__user_type='developer').filter(id__in=profileids)
 
     if request.method == 'POST':
         search_field = request.POST['search_field']
@@ -163,7 +163,7 @@ def dev_pool(request):
         filtered_devs = developers_filter.qs
 
         developers = filtered_devs.filter(
-             Q(profile__gender__icontains=search_field)
+            Q(profile__gender__icontains=search_field)
             | Q(profile__framework__icontains=search_field)
             | Q(profile__language__icontains=search_field)
 
@@ -172,14 +172,13 @@ def dev_pool(request):
         developers = [dev for dev in developers]
 
         return render(request, 'marketplace/recruiter/dev_pool.html',
-                      {'developers': developers, 'search_form': developers_filter.form,'candidates':withprofiles})
+                      {'developers': developers, 'search_form': developers_filter.form, 'candidates': withprofiles})
     else:
         developers_filter = UserFilter(request.GET, queryset=developers)
         developers = [dev for dev in developers_filter.qs]
 
         return render(request, 'marketplace/recruiter/dev_pool.html',
-                      {'developers': developers, 'search_form': developers_filter.form,'candidates':withprofiles,})
-
+                      {'developers': developers, 'search_form': developers_filter.form, 'candidates': withprofiles, })
 
 
 def dev_details(request, dev_id):
@@ -230,7 +229,7 @@ def dev_details(request, dev_id):
     return render(request, 'marketplace/recruiter/dev_portfolio.html',
                   {'json': json_data, 'repos': repoz, 'data': data, 'c': c, 'form': form,
                    'verified_projects': verified_projects, 'experience_form': experience_form,
-                   'experiences': experiences, 'skills': skills, 'developer': requested_dev,'candidate':candidate})
+                   'experiences': experiences, 'skills': skills, 'developer': requested_dev, 'candidate': candidate})
 
 
 @login_required()

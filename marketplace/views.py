@@ -223,7 +223,7 @@ def dev_details(request, dev_id):
         return render(request, 'frontend/developer/github.html', {'form': form})
 
 
-@login_required()
+@login_required
 def process_payment(request, dev_id):
     dev_req = DevRequest.objects.create(owner=request.user, dev=User.objects.get(id=dev_id))
     return render(request, 'marketplace/recruiter/payment.html',

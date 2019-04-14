@@ -169,6 +169,9 @@
 
                             <p class="text-center"><a href="{% url 'marketplace:dev_details' dev.id %}">View Details</a>
                             </p>
+
+                            <p class="text-center"><a href="{% url 'chat:chat' request.user.id dev.id %}" target="_blank">Chat</a>
+                            </p>
                         </div>
                     </div>
                 </div>

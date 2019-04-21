@@ -62,11 +62,27 @@ class JobApplication(models.Model):
 
 class DevRequest(models.Model):
     owner = models.ForeignKey(User, related_name='owner', on_delete=models.CASCADE)
-    dev = models.ForeignKey(User, related_name='dev', on_delete=models.CASCADE)
+    developers = models.CharField(max_length=200, default='[]')
     created = models.DateTimeField(auto_now_add=True)
     completed = models.DateTimeField(auto_now=True)
     paid = models.BooleanField(default=False)
     closed = models.BooleanField(default=False)
 
     def __str__(self):
-        return "{},{}".format(self.owner.username, self.dev.username)
+        return "{},{}".format(self.owner.username, self.developers)
+
+    def set_developers(self, dev):
+        self.developers = json.dumps(dev)
+
+    def get_developers(self):
+        return json.loads(self.developers)
+
+    def amount(self):
+        total_amount = 0
+        total_devs = len(self.get_developers())
+
+        if 1 <= total_devs <= 10:
+            total_amount = 200
+        elif 10 < total_devs <= 100:
+            total_amount = 20 * total_devs
+        return total_amount

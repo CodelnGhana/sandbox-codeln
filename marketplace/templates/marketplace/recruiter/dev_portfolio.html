@@ -96,13 +96,13 @@
                     {% if key == 'avatar_url' %}
                         <div style="width: 13rem;">
 
-                                <svg class="card-img-top"
-                                     style=""
-                                     data-jdenticon-value=" {{ developer.first_name }} + {{ developer.last_name }} "
-                                >
-                                    developer name
-                                </svg>
-                            </div>
+                            <svg class="card-img-top"
+                                 style=""
+                                 data-jdenticon-value=" {{ developer.first_name }} + {{ developer.last_name }} "
+                            >
+                                developer name
+                            </svg>
+                        </div>
                     {% endif %}
                 {% endfor %}
             </div>
@@ -161,21 +161,22 @@
                     <small class="form-text text-muted">Based on github activity</small>
                     {% for key,value in c.items %}
                         {% if key != None %}
-                        <span class="badge badge-pill badge-primary">{{ key }}</span>
+                            <span class="badge badge-pill badge-primary">{{ key }}</span>
                         {% endif %}
 
                     {% endfor %}
 
 
-                    <p >Preferred work type : <span class="">{{ developer.profile.availabilty }}</span></p>
-                <a style="text-decoration: none"
-               href="{% url 'marketplace:process_payment' developer.id %}"><span
-                    class="btn-sm btn-primary ">Pick Candidate</span></a>
+                    <p>Preferred work type : <span class="">{{ developer.profile.availabilty }}</span></p>
 
+                    {% if dev_picked %}
+                        <span class="btn-sm btn-dark">Candidate Picked</span>
+                    {% else %}
+                        <a style="text-decoration: none"
+                           href="{% url 'marketplace:add_dev_to_wish_list' developer.id %}"><span
+                                class="btn-sm btn-primary">Pick Candidate</span></a>
+                    {% endif %}
                 </div>
-
-
-
 
 
             </div>
@@ -241,9 +242,9 @@
                         {% for experience in experiences %}
                             <div>
                                 <p> {{ experience.title|capfirst }}
-                                <p><span data-feather="briefcase"></span>  {{ experience.company|capfirst }}
-                                      <span data-feather="calendar"></span>  {{ experience.duration }} months
-                                      <span data-feather="map-pin"></span>  {{ experience.location.name }}</p>
+                                <p><span data-feather="briefcase"></span> {{ experience.company|capfirst }}
+                                    <span data-feather="calendar"></span> {{ experience.duration }} months
+                                    <span data-feather="map-pin"></span> {{ experience.location.name }}</p>
                                 <p class="text-muted">{{ experience.description }}</p>
                                 <hr>
                             </div>
@@ -258,7 +259,7 @@
 
                 <!------github------>
                 <div class="shadow-sm p-3  mb-5  mt-5">
-                    <h5 >Github Activity</h5>
+                    <h5>Github Activity</h5>
                     <hr>
                     <div class="row">
                         {% for repo in repos %}

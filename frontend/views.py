@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from collections import Counter
 from django.urls import reverse
 import requests
-from django.core.mail import send_mail
+
 import json
 from decouple import config
 
@@ -24,9 +24,9 @@ from invitations.models import Invitation
 from projects.models import Project, Framework
 from frontend.form import Projectinvite, EditProjectForm,Submissions,Portfolio_form,Github_form,Experience_Form,About
 from frontend.models import candidatesprojects, devs, recruiters,submissions,Portfolio,Github,Experience
-from classroom.models import TakenQuiz,Student,Quiz
+from classroom.models import TakenQuiz,Student
 from marketplace.models import Job
-
+from taggit.models import TaggedItem
 @login_required
 def developer_filling_details(request, current_profile):
     if request.method == 'POST':
@@ -124,6 +124,8 @@ def index(request):
         elif request.user.profile.stage == 'complete':
             if request.user.profile.user_type == 'developer':
                 try:
+                    # user =request.user
+                    # tags = user.profile.tags.all()
                     student = Student.objects.get(user_id=request.user.id)
                     passedquizz = TakenQuiz.objects.filter(score__gt=50).filter(student_id=student)
                     return render(request, 'frontend/developer/developer.html', {'passedquizz': passedquizz})
@@ -131,6 +133,7 @@ def index(request):
                     obj = Student(user=request.user)
                     obj.save()
                     return render(request, 'frontend/developer/developer.html')
+
             elif request.user.profile.user_type == 'recruiter':
                 jobs = Job.objects.filter(posted_by=request.user)
                 return render(request, 'frontend/recruiter/recruiter.html', {'transactions': transactions,'jobs':jobs})
@@ -264,7 +267,8 @@ def pricing(request):
 def dev(request):
     return render(request, 'frontend/dev.html')
 
-
+def competitions(request):
+    return render(request, 'frontend/recruiter/competitions.html')
 
 def takenquizzes(request):
     taken = TakenQuiz.objects.all()
@@ -321,6 +325,9 @@ def onboardrecruiters(request):
 
 def credits(request):
     return render(request, 'frontend/credits.html')
+
+def management(request):
+    return render(request, 'frontend/recruiter/management.html')
 
 
 def privacy(request):
@@ -410,68 +417,50 @@ def buildproject(request):
 def calltoapply(request):
     alltransactions=Transaction.objects.filter(stage='complete').filter(closed=False)
     complete=[]
-    for onetransaction in alltransactions:
-        complete.append(onetransaction)
+    for i in alltransactions:
+        complete.append(i.id)
 
-    allopencalls = OpenCall.objects.all()
+    opportunities = OpenCall.objects.all()
     opencalls=[]
-    for oneopencall in allopencalls:
-        opencalls.append(oneopencall.transaction)
+    for io in opportunities:
+        opencalls.append(io.transaction.id)
 
     payedopencalls = set(complete)&set(opencalls)
     payed = list(payedopencalls)
 
-    opencallapplied = Applications.objects.filter(candidate=request.user)
-    applied=[]
-    for opencall in opencallapplied:
-        applied.append(opencall.transaction)
-    opportunities=list(set(payed)-set(applied))
-
+    qualifys = Applications.objects.filter(candidate=request.user)
     student = Student.objects.get(user_id=request.user.id)
-    takenquizzes = TakenQuiz.objects.filter(student_id=student)
-    allquizid=[]
-    for two in takenquizzes:
-        allquizid.append(two.quiz.id)
+    passedquizz = TakenQuiz.objects.filter(score__gte=50).filter(student_id=student)
 
+    allsubjectspassed = []
+    for d in passedquizz:
+        allsubjectspassed.append(d.quiz.subject)
 
-    allsubjectstaken = []
-    for onequiz in takenquizzes:
-        allsubjectstaken.append(onequiz.quiz.subject)
-
-    uniquesubjects = list(set(allsubjectstaken))
+    uniquesubjects = list(set(allsubjectspassed))
+    uniquelangs=[]
     langs = {}
     for unique in uniquesubjects:
-        allstudentquizzes = TakenQuiz.objects.filter(quiz__subject_id=unique.id).filter(student_id=student)
+        izzes = TakenQuiz.objects.filter(quiz__subject_id=unique.id).filter(student_id=student)
 
-        for onestudentquiz in allstudentquizzes:
-            langs[onestudentquiz.quiz.subject.name] = onestudentquiz.quiz.subject.name
-    passedquizzes = TakenQuiz.objects.filter(score__gte=50).filter(student_id=student)
-    passedquizid=[]
-    for one in passedquizzes:
-        passedquizid.append(one.quiz.id)
-    quizzes = Quiz.objects.all()
-    qualified = {}
-    unqualified ={}
-    for onepassedquiz in passedquizzes:
-        for opportunity in opportunities:
-            if opportunity.framework.name == onepassedquiz.quiz.name:
-                qualified[opportunity]=onepassedquiz
-    qualifiedtransactions=[]
-    for key,value in qualified.items():
-        qualifiedtransactions.append(key)
-    unqualifiedtransactions =list(set(opportunities)-set(qualified))
+        for i in izzes:
+            langs[i.quiz.subject.name] = i.quiz.subject.name
+    original =[]
+    taken = []
+    for oppo in payed:
+        original.append(oppo)
+    for qualify in qualifys:
+        taken.append(qualify.transaction.id)
+    untaken=[]
 
-    openopportunities ={}
-    for oneunqualified in unqualifiedtransactions:
-        for quizmoja in quizzes:
-            if oneunqualified.framework.name == quizmoja.name:
-                openopportunities[oneunqualified]=quizmoja
-
+    non = set(original) - set(taken)
+    untaken=list(non)
+    untakenopportunities =[]
+    for untake in untaken:
+        untakentrans =Transaction.objects.get(id=untake)
+        untakenopportunities.append(untakentrans.id)
 
     return render(request, 'classroom/students/opencalls.html',{'opportunities':opportunities,
-                                                                'opencallapplied':opencallapplied,
-                                                                'langs':langs,'quizzes':quizzes,'passedquizzes':passedquizzes,'qualified':qualified,
-                                                                'unqualifiedtransactions':openopportunities})
+                                                                'qualifys':qualifys,'a':original,'taken':taken,'untaken':untaken,'langs':langs,'qualify':qualifys})
 @login_required
 def apply(request,opportunity_id):
     language =OpenCall.objects.get(transaction=opportunity_id)
@@ -493,9 +482,8 @@ def apply(request,opportunity_id):
             doublequizzes.append(paz.score)
 
 
-        if pa.name == language.transaction.framework.name:
-            qualifiedcandidate = Applications(recruiter=language.recruiter,transaction=language.transaction,
-                                              project=language.project,candidate=request.user,stage='application sent',score=max(doublequizzes))
+        if pa.name == language.transaction.framework.language.name or  pa.name == language.transaction.framework.name:  #TODO: let it be explcitly for framework if pa.name==language.project.framework
+            qualifiedcandidate = Applications(recruiter=language.recruiter,transaction=language.transaction,project=language.project,candidate=request.user,stage='application sent',score=max(doublequizzes))
 
             qualifiedcandidate.save()
 
@@ -518,10 +506,9 @@ def pickcandidates(request,trans_id,candidate_id):
     newcandidate=Candidate(email=application.candidate.email,first_name=application.candidate.first_name,last_name=application.candidate.last_name,transaction=transaction)
     newcandidate.save()
     application.save()
-
     subject = 'Accepted for next stage'
     html_message = render_to_string('invitations/email/opencallaccepted.html',
-                                    {'dev': candidate,'company':transaction})
+                                    {'dev': request.user,'company':transaction})
     plain_message = strip_tags(html_message)
     from_email = 'codeln@codeln.com'
     to = candidate.email
@@ -587,6 +574,7 @@ def portfolio(request):
 
         return render(request, 'frontend/developer/github.html',{'form':form})
 
+
 @login_required
 def newproject(request):
     if request.method == 'POST':
@@ -594,10 +582,9 @@ def newproject(request):
         if myprojects.is_valid():
             title = myprojects.cleaned_data['title']
             description = myprojects.cleaned_data['description']
-            image = myprojects.cleaned_data['image']
             repo = myprojects.cleaned_data['repository_link']
             demo = myprojects.cleaned_data['demo_link']
-            newprojo =Portfolio(candidate=request.user,demo_link=demo,repository_link=repo,title=title,image=image,description=description)
+            newprojo =Portfolio(candidate=request.user,demo_link=demo,repository_link=repo,title=title,description=description)
             newprojo.save()
     return redirect(reverse('frontend:portfolio'))
 @login_required
@@ -679,69 +666,6 @@ def editportfolioproject(request,project_id):
 
     return render(request, 'frontend/developer/editproject.html',{'project': project,'form':form})
 
-
-
-
-def competitions(request):
-    qualifys={}
-    try:
-        transaction =Transaction.objects.get(user_id=760)
-        if request.user.is_authenticated:
-            try:
-                hi = Applications.objects.get(candidate=request.user, transaction_id=transaction.id)
-                qualifys=hi
-            except Applications.DoesNotExist:
-                qualifys = None
-    except Transaction.DoesNotExist:
-        transaction=None
-    quiz = Quiz.objects.get(id=12)
-    passedquizzes={}
-    if request.user.is_authenticated:
-
-        if request.user.profile.user_type=='developer':
-            student = Student.objects.get(user_id=request.user.id)
-            try:
-                passedquizzes = TakenQuiz.objects.get(score__gte=50,student_id=student.id,quiz_id=12)
-            except TakenQuiz.DoesNotExist:
-                passedquizzes=None
-
-    return render(request, 'frontend/recruiter/competitions.html',{'transaction':transaction,
-                                                                   'qualify':qualifys,'passedquizzes':passedquizzes,'quiz':quiz})
-@login_required
-def placeapplication(request,transaction_id):
-    language =OpenCall.objects.get(transaction=transaction_id)
-    student = Student.objects.get(user_id=request.user.id)
-    passedquizz = TakenQuiz.objects.filter(score__gte=50).filter(student_id=student)
-
-
-    allsubjectspassed = []
-    for d in passedquizz:
-        allsubjectspassed.append(d.quiz.subject)
-
-    uniquesubjects = list(set(allsubjectspassed))
-
-
-    for pa in uniquesubjects:
-        blu=TakenQuiz.objects.filter(quiz__subject=pa).filter(student_id=student)
-        doublequizzes =[]
-        for paz in blu:
-            doublequizzes.append(paz.score)
-
-
-        if pa.name == language.transaction.framework.language.name or  pa.name == language.transaction.framework.name:  #TODO: let it be explcitly for framework if pa.name==language.project.framework
-            qualifiedcandidate = Applications(recruiter=language.recruiter,transaction=language.transaction,project=language.project,candidate=request.user,stage='application sent',score=max(doublequizzes))
-
-            qualifiedcandidate.save()
-            subject = 'Application received'
-            message = ' Thank you for placing your application. \n ' \
-                      'You will soon get an invite to conduct further assessment by a Codeln representative \n' \
-                      '\n' \
-                      'Cheers team Codeln '
-            email_from = config('EMAIL_HOST_USER', default='EMAIL_HOST_USER')
-            to = request.user.email
-            send_mail(subject, message, email_from, [to])
-
-    return redirect('frontend:competitions')
 def about(request,candidate_id):
     instance = get_object_or_404(Github,candidate_id=candidate_id)
     if request.method =='POST':
@@ -750,5 +674,4 @@ def about(request,candidate_id):
             new_about.save()
             return redirect('frontend:portfolio')
     return redirect(reverse('frontend:portfolio'))
-def management(request):
-    return render(request, 'frontend/recruiter/management.html')
+

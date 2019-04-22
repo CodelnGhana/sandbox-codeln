@@ -173,7 +173,6 @@ def dev_pool(request):
             Q(profile__gender__icontains=search_field)
             | Q(profile__framework__icontains=search_field)
             | Q(profile__language__icontains=search_field)
-
         )
 
         developers = [dev for dev in developers]

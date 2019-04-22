@@ -51,9 +51,7 @@ docutils==0.14
 enum34==1.1.6
 Fabric3==1.14.post1
 gunicorn==19.7.1
-hyperlink==18.0.0
 idna==2.7
-incremental==17.5.0
 ipaddress==1.0.17
 jmespath==0.9.3
 jsonpickle==1.0
